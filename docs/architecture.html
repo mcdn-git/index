@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>架构分层 — Zenith（齐天）教程</title>
+  <meta name="description" content="Zenith 架构分层：L2→L7 全栈、20 个 crate 职责、数据面协作模型与设计原则。">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="architecture">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="../index.html">首页</a></li>
+        <li><a href="../features.html">特性</a></li>
+        <li><a href="../docs.html">文档</a></li>
+        <li><a href="../benchmarks.html">基准</a></li>
+        <li><a href="../security.html">安全</a></li>
+        <li><a href="../sponsors.html">赞助</a></li>
+        <li><a href="../links.html">友链</a></li>
+        <li><a href="../license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Tutorial · 02</span>
+      <h1>架构分层</h1>
+      <p class="lead">Zenith 将完整网络栈拆分为 20 个 crate，从内核旁路到应用层逐层覆盖。理解分层是高效使用它的关键。</p>
+    </div>
+  </header>
+
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap doc-layout">
+      <aside id="doc-sidebar"></aside>
+
+      <div class="doc-body">
+        <h2 id="layers">L2→L7 分层总览</h2>
+        <div class="stack">
+          <div class="stack-row"><span class="layer">L7</span><span class="name">应用层</span><span class="desc">路由 / 中间件 / WAF / 缓存 / 代理 / 指纹</span><span class="crates">web · waf · cache · proxy · fingerprint</span></div>
+          <div class="stack-row"><span class="layer l-amber">L6</span><span class="name">加密层</span><span class="desc">TLS 1.3 · 证书代际 · SNI 路由 · JA3/JA4</span><span class="crates">zenith-tls</span></div>
+          <div class="stack-row"><span class="layer l-amber">L5</span><span class="name">会话层</span><span class="desc">HTTP/1.1 · HTTP/2 · HTTP/3(QUIC)</span><span class="crates">http1 · http2 · http3</span></div>
+          <div class="stack-row"><span class="layer l-green">L4</span><span class="name">传输层</span><span class="desc">TCP 状态机 · UDP 会话表 · QUIC · 端口过滤</span><span class="crates">net · forward</span></div>
+          <div class="stack-row"><span class="layer l-green">L3</span><span class="name">网络层</span><span class="desc">IPv4/IPv6 · IP 黑白名单 · CIDR 子网过滤</span><span class="crates">net</span></div>
+          <div class="stack-row"><span class="layer l-dim">L2</span><span class="name">数据面</span><span class="desc">AF_XDP · io_uring · splice · eBPF 双 Bank</span><span class="crates">linux · ebpf · core</span></div>
+        </div>
+
+        <h2 id="crates">20 个 Crate 职责</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Crate</th><th>层级</th><th>核心能力</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-td">zenith-api</td><td class="mono-td">L7</td><td>三协议收敛到 CanonicalRequest/Response，固定容量数组零堆分配</td></tr>
+              <tr><td class="mono-td">zenith-core</td><td class="mono-td">L2+</td><td>FramePool、资源账本、恒定时间比较、Huffman、varint</td></tr>
+              <tr><td class="mono-td">zenith-linux</td><td class="mono-td">L2</td><td>AF_XDP Socket + UMEM + 四环、io_uring、splice</td></tr>
+              <tr><td class="mono-td">zenith-ebpf</td><td class="mono-td">L2</td><td>eBPF 预编译字节码嵌入、libbpf 加载、双 Bank 热更新</td></tr>
+              <tr><td class="mono-td">zenith-net</td><td class="mono-td">L2-L4</td><td>协议解析、TCP 状态机、UDP 会话表、QUIC 传输、准入引擎</td></tr>
+              <tr><td class="mono-td">zenith-tls</td><td class="mono-td">L6</td><td>TLS 1.3、证书代际、SNI/ALPN 路由、JA3/JA4</td></tr>
+              <tr><td class="mono-td">zenith-http1</td><td class="mono-td">L7</td><td>HTTP/1.1 解析、请求走私防护、CRLF 防注入</td></tr>
+              <tr><td class="mono-td">zenith-http2</td><td class="mono-td">L7</td><td>HTTP/2 帧解析、HPACK、流量控制、Rapid Reset 检测</td></tr>
+              <tr><td class="mono-td">zenith-http3</td><td class="mono-td">L7</td><td>HTTP/3 帧、QPACK、SETTINGS、GOAWAY</td></tr>
+              <tr><td class="mono-td">zenith-web</td><td class="mono-td">L7</td><td>路由、中间件、静态文件、ProtocolServer（H1/H2/H3）、SecurityPipeline</td></tr>
+              <tr><td class="mono-td">zenith-proxy</td><td class="mono-td">L7</td><td>反向代理、6 负载均衡、熔断器、连接池、H3 客户端</td></tr>
+              <tr><td class="mono-td">zenith-cache</td><td class="mono-td">L7</td><td>16 分片缓存、条件请求、stale-while-revalidate、租户隔离</td></tr>
+              <tr><td class="mono-td">zenith-waf</td><td class="mono-td">L7</td><td>6 检测器、50ms 预算、规则 IR、自持检测器扩展</td></tr>
+              <tr><td class="mono-td">zenith-forward</td><td class="mono-td">L4</td><td>TcpRelay、协议转换、CIDR 白名单、背压与带宽配额</td></tr>
+              <tr><td class="mono-td">zenith-fingerprint</td><td class="mono-td">L3-L7</td><td>34 采集器、256B 特征向量、决策引擎、三级阻断</td></tr>
+              <tr><td class="mono-td">zenith-runtime</td><td class="mono-td">运行时</td><td>全局 Tokio、三级 Supervisor、ChangeSet 热切换、AutoOptimizer</td></tr>
+              <tr><td class="mono-td">zenith-capability</td><td class="mono-td">运行时</td><td>环境探测、PermissionSet、Profile 三级降级</td></tr>
+              <tr><td class="mono-td">zenith-observability</td><td class="mono-td">运行时</td><td>指标、tracing、审计日志、故障快照、分布式追踪</td></tr>
+              <tr><td class="mono-td">zenith-testkit</td><td class="mono-td">测试</td><td>测试工具、Demo、压力测试</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="dataflow">数据面协作模型</h2>
+        <p>Zenith 最核心的路径从网卡驱动层开始，逐层进入用户态处理：</p>
+        <div class="code-block">
+          <div class="code-head"><span>数据流</span></div>
+          <div class="code-body"><code>网卡 → XDP hook (eBPF 内核态线速粗过滤)
+        ↓ XDP_PASS
+     AF_XDP UMEM (零拷贝)
+        ↓
+     Worker process_cycle (Phase 0-5)
+        ↓
+     SourceAdmissionEngine (用户态细粒度规则匹配)
+        ↓ Allow
+     L7 处理 (HTTP / TLS / WAF / Proxy / Cache)</code></div>
+        </div>
+        <p>eBPF 负责内核态线速粗过滤（XDP_DROP / XDP_PASS），通过 <span class="mono-td">bpf_redirect_map</span> 将放行包送入 AF_XDP UMEM；用户态 <span class="mono-td">SourceAdmissionEngine</span> 再对每一包做细粒度的源 IP × 端口 × 协议匹配，最终放行进入 L7 应用处理。</p>
+
+        <h2 id="principles">设计原则</h2>
+        <ul>
+          <li><strong>Fail-Closed</strong>：探测 / 构建 / 解析失败取安全默认值，永不 panic。</li>
+          <li><strong>热路径零堆分配</strong>：固定容量数组替代 String/Vec。</li>
+          <li><strong>单线程本地存储</strong>：无锁访问、对象池复用。</li>
+          <li><strong>编译期路由注册</strong>：运行期零开销分发。</li>
+          <li><strong>unsafe 隔离</strong>：所有 unsafe 封装在 zen-linux / zen-ebpf 内部，上层零 unsafe。</li>
+          <li><strong>Copy 语义</strong>：核心类型支持 Copy，避免 Clone 开销。</li>
+          <li><strong>代际安全</strong>：证书 / 配置双 Bank 原子切换。</li>
+          <li><strong>恒定时间比较</strong>：DCID / Token / 密码 / 模式匹配防时序侧信道。</li>
+        </ul>
+
+        <div class="callout">
+          <strong>提示：</strong>完整架构协作与安全模型，还可参考 <a href="security.html">安全管道</a> 章节。
+        </div>
+      </div>
+
+      <aside class="doc-toc" id="doc-toc"></aside>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>文档</h4>
+          <ul>
+            <li><a href="quickstart.html">快速开始</a></li>
+            <li><a href="architecture.html">架构分层</a></li>
+            <li><a href="web.html">Web 框架</a></li>
+            <li><a href="deploy.html">部署</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="../features.html">特性</a></li>
+            <li><a href="../benchmarks.html">基准</a></li>
+            <li><a href="../security.html">安全</a></li>
+            <li><a href="../license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="../security.html#disclosure">漏洞报告</a></li>
+            <li><a href="../sponsors.html">赞助与商业</a></li>
+            <li><a href="../links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/docs.js"></script>
+</body>
+</html>

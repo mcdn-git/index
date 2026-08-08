@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zenith（齐天）— L2→L7 全栈网络安全数据面框架</title>
+  <meta name="description" content="Zenith 是用 Rust 编写的 L2→L7 全栈网络安全数据面框架：AF_XDP + eBPF + TLS 1.3 + HTTP/1-2-3 + Web + Proxy + WAF + Cache + Fingerprint。既能构建系统级网络防火墙，也能构建 CDN 边缘节点和 API 网关。">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ================= 导航 ================= -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">▲</span>
+        <span>Zenith<small>齐天</small></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html">首页</a></li>
+        <li><a href="features.html">特性</a></li>
+        <li><a href="docs.html">文档</a></li>
+        <li><a href="benchmarks.html">基准</a></li>
+        <li><a href="security.html">安全</a></li>
+        <li><a href="sponsors.html">赞助</a></li>
+        <li><a href="links.html">友链</a></li>
+        <li><a href="license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="docs/quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <!-- ================= Hero ================= -->
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="hero-badge"><span class="dot"></span> L2 → L7 全栈 · Rust · Fail-Closed</span>
+        <h1>从内核旁路到应用层的<br><span class="grad-text">全栈网络安全框架</span></h1>
+        <p class="hero-lead">一个库同时构建系统级网络防火墙、CDN 边缘节点与 API 网关。AF_XDP + eBPF 零拷贝数据面，一路直达应用层 WAF —— 性能与安全，一个代码库覆盖完毕。</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="docs.html">▸ 快速开始</a>
+          <a class="btn btn-ghost" href="features.html">查看特性</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="num"><em>20</em> crates</div><div class="lbl">模块化 facade</div></div>
+          <div class="hero-stat"><div class="num"><em>3235</em></div><div class="lbl">测试通过</div></div>
+          <div class="hero-stat"><div class="num"><em>100k+</em> req/s</div><div class="lbl">HTTP/1.1 基准</div></div>
+          <div class="hero-stat"><div class="num"><em>8</em> 轮</div><div class="lbl">安全审计</div></div>
+        </div>
+      </div>
+
+      <!-- 终端 -->
+      <div class="term reveal">
+        <div class="term-bar"><span class="tl r"></span><span class="tl y"></span><span class="tl g"></span><span class="tt">zenith · cargo run --example full_feature_server</span></div>
+        <div class="term-body"><span class="d">$</span> cargo run --example hello_server
+<span class="c">[zenith]</span> profile: <span class="g">Performance</span> (tier=3)
+<span class="c">[zenith]</span> data-plane: <span class="g">AF_XDP + eBPF + io_uring</span>
+<span class="c">[zenith]</span> listening h1/h2/h3 + tls1.3
+<span class="c">[zenith]</span> waf: <span class="g">armed</span> (sqli/xss/ssrf/…)
+<span class="c">[zenith]</span> fingerprint: <span class="g">ja3/ja4</span> · cache: 16 shards
+<span class="c">[zenith]</span> proxy: 6 lb · forward: tcp/udp
+<span class="g">✓</span> server ready on 0.0.0.0:8080
+<span class="d">$</span> curl -i http://localhost:8080/health
+HTTP/1.1 <span class="a">200 OK</span>
+content-type: application/json
+
+<span class="d">{"status":"ok","layer":"L2-L7","latency_us":37}</span><span class="term-cursor"></span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 能力网格 ================= -->
+  <section class="section" id="capabilities">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">核心能力</span>
+        <h2 class="section-title">一套数据面，六种开箱即用的形态</h2>
+        <p class="section-sub">从网卡驱动层的线速过滤，到应用层的业务路由，Zenith 把传统需要多套系统拼装的场景收敛进单一代码库。</p>
+      </div>
+      <div class="grid g-6" style="margin-top:36px;">
+        <div class="card reveal"><div class="ico">01</div><h3>系统级防火墙</h3><p>AF_XDP + eBPF 网卡驱动层线速包过滤，L3/L4 IP·端口·协议过滤，TCP 状态机。</p><div class="tags"><span class="tag">XDP_DROP</span><span class="tag">SourceAdmission</span><span class="tag">conntrack</span></div></div>
+        <div class="card reveal"><div class="ico">02</div><h3>CDN 边缘节点</h3><p>16 分片缓存、条件请求 304/206/416、stale-while-revalidate、SSL 终止、边缘代理。</p><div class="tags"><span class="tag">Cache</span><span class="tag">HTTP/3</span><span class="tag">TLS</span></div></div>
+        <div class="card reveal"><div class="ico">03</div><h3>API 网关</h3><p>编译期 Trie 路由、类型化 Extract、中间件 DAG、WAF、限流、反向代理。</p><div class="tags"><span class="tag">Router</span><span class="tag">Middleware</span><span class="tag">WAF</span></div></div>
+        <div class="card reveal"><div class="ico">04</div><h3>Web 防火墙</h3><p>SQLi / XSS / SSRF / 命令注入 / 路径穿越 / BotThreat 6 检测器，50ms 预算 fail-closed。</p><div class="tags"><span class="tag">WAF</span><span class="tag">BotThreat</span><span class="tag">429</span></div></div>
+        <div class="card reveal"><div class="ico">05</div><h3>反向代理</h3><p>6 种负载均衡 + 熔断器 + 连接池 + H3 真实 QUIC 客户端 + Auto 最优路径。</p><div class="tags"><span class="tag">RR/P2C/IPHash</span><span class="tag">Circuit</span><span class="tag">QUIC</span></div></div>
+        <div class="card reveal"><div class="ico">06</div><h3>指纹识别</h3><p>34 采集器覆盖 L3-L7，256B 特征向量，JA3/JA4 指纹阻断，三级执行。</p><div class="tags"><span class="tag">JA3/JA4</span><span class="tag">XDP/L4/L7</span><span class="tag">信誉</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 架构分层 ================= -->
+  <section class="section" id="stack">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">架构分层</span>
+        <h2 class="section-title">L2 → L7，单一代码库的完整协议栈</h2>
+        <p class="section-sub">每一层都是可独立启用的 crate，按需引入，避免拖入不必要的重依赖。</p>
+      </div>
+      <div class="stack" style="margin-top:36px;">
+        <div class="stack-row reveal"><span class="layer">L7</span><span class="name">应用层</span><span class="desc">路由 / 中间件 / WAF / 缓存 / 代理 / 指纹决策</span><span class="crates">zenith-web · waf · cache · proxy · fingerprint</span></div>
+        <div class="stack-row reveal"><span class="layer l-amber">L6</span><span class="name">加密层</span><span class="desc">TLS 1.3 · 证书代际 · SNI 路由 · JA3/JA4</span><span class="crates">zenith-tls</span></div>
+        <div class="stack-row reveal"><span class="layer l-amber">L5</span><span class="name">会话层</span><span class="desc">HTTP/1.1 · HTTP/2 · HTTP/3(QUIC)</span><span class="crates">zenith-http1 · http2 · http3</span></div>
+        <div class="stack-row reveal"><span class="layer l-green">L4</span><span class="name">传输层</span><span class="desc">TCP 状态机 · UDP 会话表 · 端口过滤 · 转发</span><span class="crates">zenith-net · forward</span></div>
+        <div class="stack-row reveal"><span class="layer l-green">L3</span><span class="name">网络层</span><span class="desc">IPv4/IPv6 解析 · IP 黑白名单 · CIDR 子网</span><span class="crates">zenith-net · forward</span></div>
+        <div class="stack-row reveal"><span class="layer l-dim">L2</span><span class="name">数据面</span><span class="desc">AF_XDP · io_uring · splice 零拷贝 · eBPF 双 Bank</span><span class="crates">zenith-linux · ebpf · core</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 数字 banner ================= -->
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap">
+      <div class="metrics-band reveal">
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="100">0</span>k+<em> req/s</em></div><div class="m-lbl">HTTP/1.1 高并发基准</div></div>
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="146">0</span><em>/146</em></div><div class="m-lbl">h2spec 通过</div></div>
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="49">0</span><em>/49</em></div><div class="m-lbl">h3spec 通过</div></div>
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="0">0</span><em> CVE</em></div><div class="m-lbl">cargo audit 零风险</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 代码示例 ================= -->
+  <section class="section" id="code">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">5 行代码起步</span>
+        <h2 class="section-title">最小 Web 框架，不拖入数据面</h2>
+        <p class="section-sub">按需启用 feature，保持依赖最小。以下仅需 <span class="mono mono-td">web</span> 特性。</p>
+      </div>
+      <div class="code-block reveal" style="margin-top:36px;">
+        <div class="code-head"><span>hello_server.rs</span><span class="fn">zenith-web</span></div>
+        <div class="code-body"><code><span class="tok-k">use</span> zenith::<span class="tok-t">App</span>;
+<span class="tok-k">use</span> zenith::api::{<span class="tok-t">CanonicalRequest</span>, <span class="tok-t">CanonicalResponse</span>};
+
+<span class="tok-k">fn</span> <span class="tok-f">main</span>() {
+    <span class="tok-k">let</span> <span class="tok-k">mut</span> app = <span class="tok-t">App</span>::<span class="tok-f">new</span>();
+    app.<span class="tok-f">get</span>(<span class="tok-s">"/health"</span>, |_req, _params| {
+        <span class="tok-t">Ok</span>(<span class="tok-t">CanonicalResponse</span>::<span class="tok-f">new</span>(<span class="tok-n">204</span>))
+    });
+    <span class="tok-c">// 编译期 Trie 路由，运行期零开销分发</span>
+    app.<span class="tok-f">run</span>(<span class="tok-s">"0.0.0.0:8080"</span>).<span class="tok-f">unwrap</span>();
+}</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 跨平台 / 降级 ================= -->
+  <section class="section" id="platform">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">跨平台自动降级</span>
+        <h2 class="section-title">Linux 极致性能，他处依旧全功能</h2>
+      </div>
+      <div class="grid g-3" style="margin-top:36px;">
+        <div class="card reveal"><div class="ico">tier=3</div><h3>Performance</h3><p>XDP Native + AF_XDP 零拷贝 + BTF/CO-RE，splice + io_uring + eBPF 全启用。</p><div class="tags"><span class="tag">score 100</span><span class="tag">Linux</span></div></div>
+        <div class="card reveal"><div class="ico">tier=2</div><h3>Balanced</h3><p>XDP Generic + BPF，io_uring 可用，无 Native / 零拷贝。</p><div class="tags"><span class="tag">score 92</span><span class="tag">中等</span></div></div>
+        <div class="card reveal"><div class="ico">tier=1</div><h3>Minimal</h3><p>仅 std::net basic_socket，TcpRelay 回退 std::io::copy；WAF/代理/缓存/路由全功能可用。</p><div class="tags"><span class="tag">score 67</span><span class="tag">Windows</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CTA ================= -->
+  <section class="section">
+    <div class="wrap">
+      <div class="metrics-band reveal" style="text-align:center; justify-items:center;">
+        <div style="grid-column:1/-1;">
+          <h2 class="section-title">准备好构建你的数据面了吗？</h2>
+          <p class="section-sub" style="margin:0 auto 30px;">一个库，覆盖防火墙、CDN 边缘与 API 网关。</p>
+          <div class="hero-cta" style="justify-content:center;">
+            <a class="btn btn-primary" href="docs.html">▸ 阅读文档</a>
+            <a class="btn btn-ghost" href="benchmarks.html">查看基准</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 页脚 ================= -->
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="features.html">特性</a></li>
+            <li><a href="benchmarks.html">性能基准</a></li>
+            <li><a href="docs.html">文档</a></li>
+            <li><a href="security.html">安全</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>资源</h4>
+          <ul>
+            <li><a href="docs.html#quickstart">快速开始</a></li>
+            <li><a href="docs.html#architecture">架构分层</a></li>
+            <li><a href="docs.html#features">Feature 矩阵</a></li>
+            <li><a href="license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#capabilities">GitHub</a></li>
+            <li><a href="security.html#disclosure">漏洞报告</a></li>
+            <li><a href="sponsors.html">赞助与商业</a></li>
+            <li><a href="links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

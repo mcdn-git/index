@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature 矩阵 — Zenith（齐天）教程</title>
+  <meta name="description" content="Zenith Feature 矩阵：全部 feature 与依赖、组合特性、按需导入方式与直接引用子 crate。">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="features">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="../index.html">首页</a></li>
+        <li><a href="../features.html">特性</a></li>
+        <li><a href="../docs.html">文档</a></li>
+        <li><a href="../benchmarks.html">基准</a></li>
+        <li><a href="../security.html">安全</a></li>
+        <li><a href="../sponsors.html">赞助</a></li>
+        <li><a href="../links.html">友链</a></li>
+        <li><a href="../license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Tutorial · 03</span>
+      <h1>Feature 矩阵</h1>
+      <p class="lead">Zenith 采用 Cargo feature 门控，默认仅启用最小核心。本页列出全部 feature 及其依赖，帮助你精准选型。</p>
+    </div>
+  </header>
+
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap doc-layout">
+      <aside id="doc-sidebar"></aside>
+
+      <div class="doc-body">
+        <h2 id="matrix">Feature 全览</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Feature</th><th>启用能力</th><th>重依赖</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-td">api</td><td>公共类型定义（CanonicalRequest/Response 等）</td><td>无</td></tr>
+              <tr><td class="mono-td">core</td><td>FramePool、账本、ct_compare、时间轮</td><td>thiserror</td></tr>
+              <tr><td class="mono-td">net</td><td>L2-L4 协议解析、TCP/UDP/QUIC 状态机、准入引擎、Worker</td><td>core</td></tr>
+              <tr><td class="mono-td">linux</td><td>AF_XDP、UMEM、四环、io_uring、splice</td><td>libc</td></tr>
+              <tr><td class="mono-td">ebpf</td><td>eBPF 加载、双 Bank 热更新</td><td>libbpf-rs, libc</td></tr>
+              <tr><td class="mono-td">tls</td><td>TLS 1.3、证书代际、JA3/JA4 指纹</td><td>rustls, ring</td></tr>
+              <tr><td class="mono-td">http1/2/3</td><td>HTTP 协议解析器</td><td>net</td></tr>
+              <tr><td class="mono-td">web</td><td>Web 框架（路由/中间件/静态文件/安全管道）</td><td>serde, serde_json, rustc-hash, ring</td></tr>
+              <tr><td class="mono-td">proxy</td><td>反向代理、6 负载均衡、熔断器、连接池</td><td>rustls, quinn-proto, bytes</td></tr>
+              <tr><td class="mono-td">cache</td><td>HTTP 缓存层（16 分片、条件请求）</td><td>无</td></tr>
+              <tr><td class="mono-td">waf</td><td>Web 应用防火墙（6 检测器、50ms 预算）</td><td>无</td></tr>
+              <tr><td class="mono-td">fingerprint</td><td>全链路指纹识别与阻断（L3-L7）</td><td>独立运行</td></tr>
+              <tr><td class="mono-td">forward</td><td>L4 转发（TcpRelay、CIDR 白名单、协议转换）</td><td>linux（启用 splice）</td></tr>
+              <tr><td class="mono-td">runtime</td><td>全链路数据面运行时（Supervisor、ChangeSet、AutoOptimizer）</td><td>net+linux+ebpf，升级 web 到 full</td></tr>
+              <tr><td class="mono-td">capability</td><td>环境探测、能力安全、Profile 三级降级</td><td>无</td></tr>
+              <tr><td class="mono-td">observability</td><td>指标、tracing、审计日志、故障快照</td><td>无</td></tr>
+              <tr><td class="mono-td">audit</td><td>cargo-audit（netlink 链路）</td><td>audit（仅 Linux）</td></tr>
+              <tr><td class="mono-td">testkit</td><td>测试工具、Demo、压力测试</td><td>full</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="combos">组合特性</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>组合 Feature</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-td">http</td><td>http1 + http2 + http3</td></tr>
+              <tr><td class="mono-td">full-stack</td><td>api + web + http + tls + proxy + cache + waf + forward + runtime + capability + observability</td></tr>
+              <tr><td class="mono-td">full</td><td>full-stack + testkit</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <strong>注意：</strong><span class="mono-td">runtime</span> 特性依赖 <span class="mono-td">net + linux + ebpf</span>，并把 <span class="mono-td">zenith-web</span> 升级到 <span class="mono-td">full</span>（AF_XDP 桥接 / 运行时治理闭环）。<span class="mono-td">audit</span> 特性仅 Linux 可用。
+        </div>
+
+        <h2 id="facade">按需导入</h2>
+        <p>Zenith 默认仅启用最小核心（<span class="mono-td">api + core</span>），其余能力按需开启，避免拖入不必要的重依赖（如 <span class="mono-td">libbpf-rs</span>、<span class="mono-td">rustls</span>、<span class="mono-td">ring</span>）。</p>
+
+        <h3>仅 Web 框架（不拖入数据面）</h3>
+        <div class="code-block">
+          <div class="code-head"><span>Cargo.toml</span></div>
+          <div class="code-body"><code>[dependencies]
+zenith = { path = <span class="tok-s">"..."</span>, default-features = <span class="tok-k">false</span>, features = [<span class="tok-s">"web"</span>] }</code></div>
+        </div>
+
+        <h3>仅 HTTP 协议解析（无 Linux 数据面）</h3>
+        <div class="code-block">
+          <div class="code-head"><span>Cargo.toml</span></div>
+          <div class="code-body"><code>[dependencies]
+zenith = { path = <span class="tok-s">"..."</span>, default-features = <span class="tok-k">false</span>, features = [<span class="tok-s">"http"</span>] }</code></div>
+        </div>
+
+        <h3>完整生产协议栈</h3>
+        <div class="code-block">
+          <div class="code-head"><span>Cargo.toml</span></div>
+          <div class="code-body"><code>[dependencies]
+zenith = { path = <span class="tok-s">"..."</span>, features = [<span class="tok-s">"full-stack"</span>] }</code></div>
+        </div>
+
+        <h2 id="direct-crate">直接引用子 crate</h2>
+        <p>除使用 facade 外，也可直接引用单个子 crate，适合只需求某一独立能力的场景。子 crate 的 <span class="mono-td">default</span> 特性均为空，仅包含必需依赖。</p>
+        <div class="code-block">
+          <div class="code-head"><span>Cargo.toml</span></div>
+          <div class="code-body"><code>[dependencies]
+<span class="tok-c"># 只依赖 Web 框架</span>
+zenith-web = { path = <span class="tok-s">".../zenith/crates/zenith-web"</span> }
+
+<span class="tok-c"># 只依赖 L4 转发</span>
+zenith-forward = { path = <span class="tok-s">".../zenith/crates/zenith-forward"</span> }
+
+<span class="tok-c"># 只依赖指纹识别</span>
+zenith-fingerprint = { path = <span class="tok-s">".../zenith/crates/zenith-fingerprint"</span> }</code></div>
+        </div>
+
+        <div class="callout warn">
+          <strong>平台注意：</strong><span class="mono-td">zenith-net</span> / <span class="mono-td">zenith-forward</span> 在 workspace 层 <span class="mono-td">default-features = false</span>，Linux 数据面由使用方按需开启，保证最小依赖路径真实可控。
+        </div>
+      </div>
+
+      <aside class="doc-toc" id="doc-toc"></aside>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>文档</h4>
+          <ul>
+            <li><a href="quickstart.html">快速开始</a></li>
+            <li><a href="architecture.html">架构分层</a></li>
+            <li><a href="web.html">Web 框架</a></li>
+            <li><a href="deploy.html">部署</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="../features.html">特性</a></li>
+            <li><a href="../benchmarks.html">基准</a></li>
+            <li><a href="../security.html">安全</a></li>
+            <li><a href="../license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="../security.html#disclosure">漏洞报告</a></li>
+            <li><a href="../sponsors.html">赞助与商业</a></li>
+            <li><a href="../links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/docs.js"></script>
+</body>
+</html>

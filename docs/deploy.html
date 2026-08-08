@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>部署与降级 — Zenith（齐天）教程</title>
+  <meta name="description" content="Zenith 部署与降级：跨平台自动降级、构建要求与生产部署建议。">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="deploy">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="../index.html">首页</a></li>
+        <li><a href="../features.html">特性</a></li>
+        <li><a href="../docs.html">文档</a></li>
+        <li><a href="../benchmarks.html">基准</a></li>
+        <li><a href="../security.html">安全</a></li>
+        <li><a href="../sponsors.html">赞助</a></li>
+        <li><a href="../links.html">友链</a></li>
+        <li><a href="../license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Tutorial · 08</span>
+      <h1>部署与降级</h1>
+      <p class="lead">Zenith 在 Linux 上提供极致性能，在其他平台自动降级仍全功能可用。本页说明构建要求、降级机制与生产部署建议。</p>
+    </div>
+  </header>
+
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap doc-layout">
+      <aside id="doc-sidebar"></aside>
+
+      <div class="doc-body">
+        <h2 id="build">构建要求</h2>
+        <ul>
+          <li><strong>Rust 1.97.1+</strong>（Stable，禁止 Nightly/Beta），edition 2024。</li>
+          <li><strong>Linux 内核 5.4+</strong>：启用 <span class="mono-td">linux/ebpf/runtime</span> 特性时。</li>
+          <li><strong>libbpf 1.0+</strong>：启用 <span class="mono-td">linux/ebpf</span> 特性时。</li>
+          <li><strong>Windows / macOS</strong>：无需特殊依赖，自动降级到 std::net。</li>
+        </ul>
+        <div class="code-block">
+          <div class="code-head"><span>构建与测试</span></div>
+          <div class="code-body"><code><span class="tok-c"># 全量测试（含所有特性）</span>
+cargo test --workspace --all-features
+
+<span class="tok-c"># 默认特性</span>
+cargo test -p zenith
+
+<span class="tok-c"># 单 crate</span>
+cargo test -p zenith-web
+
+<span class="tok-c"># 安全审计</span>
+cargo audit</code></div>
+        </div>
+
+        <h2 id="degrade">跨平台自动降级</h2>
+        <p><span class="mono-td">EnvironmentDetector</span> 真实探测 → <span class="mono-td">ProfileSelector</span> 多目标评分 → <span class="mono-td">degrade()</span> 三级降级链。</p>
+        <div class="code-block">
+          <div class="code-head"><span>降级链</span></div>
+          <div class="code-body"><code>高性能环境 (XDP Native + AF_XDP + 零拷贝 + BTF/CO-RE)
+  → Performance (tier=3, score=100)  splice + io_uring + AF_XDP + eBPF 全启用
+
+中等环境 (XDP Generic + BPF，无 Native/零拷贝)
+  → Balanced (tier=2, score=92)  XDP Generic + BPF，io_uring 可用
+
+低能力环境 (无 XDP/AF_XDP/eBPF，如 Windows/最小容器)
+  → Minimal (tier=1, score=67)  仅 std::net basic_socket
+     TcpRelay 回退 std::io::copy
+     WAF/代理/缓存/路由 全功能可用</code></div>
+        </div>
+
+        <h2 id="runtime">GlobalRuntime 自动推导</h2>
+        <p>运行时通过 <span class="mono-td">RuntimeConfig::auto()</span> 按 CPU/NUMA 自动推导配置，<span class="mono-td">GlobalRuntime</span> 采用三路径 fail-closed 构建：</p>
+        <ul>
+          <li>高性能路径：AF_XDP + eBPF + io_uring 全启用。</li>
+          <li>平衡路径：XDP Generic + BPF。</li>
+          <li>最小路径：回落 std::net，仅保留基础能力。</li>
+        </ul>
+        <div class="callout warn">
+          跨平台降级确保功能可用，但性能档位不同。生产环境请先运行 <span class="mono-td">auto_degrade_test</span> 确认实际档位。
+        </div>
+
+        <h2 id="production">生产部署建议</h2>
+        <ul>
+          <li><strong>Linux 生产</strong>：启用 <span class="mono-td">runtime</span> 特性以获取 AF_XDP/eBPF 数据面与 Supervisor 治理闭环。</li>
+          <li><strong>release 优化</strong>：仓库已配置 opt-level=3、lto=fat、codegen-units=1、panic=abort、strip=symbols。</li>
+          <li><strong>安全基线</strong>：上线前运行 <span class="mono-td">cargo audit</span> 与全量测试。</li>
+          <li><strong>热更新</strong>：利用 <a href="hot-reload.html">运行时热更新</a> 调整参数，避免频繁重建。</li>
+          <li><strong>可观测</strong>：启用 <span class="mono-td">observability</span> 特性接入 Prometheus 指标与审计日志。</li>
+        </ul>
+
+        <h2 id="checklist">部署检查清单</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>项目</th><th>建议</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-td">Rust 版本</td><td>1.97.1+ Stable</td></tr>
+              <tr><td class="mono-td">Feature</td><td>生产选 full-stack；仅 Web 选 web</td></tr>
+              <tr><td class="mono-td">性能档位</td><td>先跑 auto_degrade_test 确认</td></tr>
+              <tr><td class="mono-td">安全</td><td>cargo audit + 全量测试</td></tr>
+              <tr><td class="mono-td">可观测</td><td>启用 observability</td></tr>
+              <tr><td class="mono-td">热更新</td><td>上线后通过 RuntimeConfig 调整</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <strong>至此教程完成。</strong>你已经从零开始理解并部署了 Zenith。推荐进一步阅读 <a href="../security.html">安全审计</a>、<a href="../benchmarks.html">性能基准</a> 与 <a href="../license.html">许可证</a>。
+        </div>
+      </div>
+
+      <aside class="doc-toc" id="doc-toc"></aside>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>文档</h4>
+          <ul>
+            <li><a href="quickstart.html">快速开始</a></li>
+            <li><a href="architecture.html">架构分层</a></li>
+            <li><a href="web.html">Web 框架</a></li>
+            <li><a href="deploy.html">部署</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="../features.html">特性</a></li>
+            <li><a href="../benchmarks.html">基准</a></li>
+            <li><a href="../security.html">安全</a></li>
+            <li><a href="../license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="../security.html#disclosure">漏洞报告</a></li>
+            <li><a href="../sponsors.html">赞助与商业</a></li>
+            <li><a href="../links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/docs.js"></script>
+</body>
+</html>

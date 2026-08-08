@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>安全管道 — Zenith（齐天）教程</title>
+  <meta name="description" content="Zenith 安全管道：8 步 SecurityPipeline、WAF、指纹识别、身份一致性、请求走私防护与 Fail-Closed 原则。">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="security">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="../index.html">首页</a></li>
+        <li><a href="../features.html">特性</a></li>
+        <li><a href="../docs.html">文档</a></li>
+        <li><a href="../benchmarks.html">基准</a></li>
+        <li><a href="../security.html">安全</a></li>
+        <li><a href="../sponsors.html">赞助</a></li>
+        <li><a href="../links.html">友链</a></li>
+        <li><a href="../license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Tutorial · 06</span>
+      <h1>安全管道</h1>
+      <p class="lead">Fail-Closed 是 Zenith 的第一性原理。SecurityPipeline 将 WAF、指纹、身份一致性、请求走私防护等纵深防御封装为 8 步管道。</p>
+    </div>
+  </header>
+
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap doc-layout">
+      <aside id="doc-sidebar"></aside>
+
+      <div class="doc-body">
+        <h2 id="pipeline">SecurityPipeline 8 步管道</h2>
+        <p><span class="mono-td">ProtocolServer</span> 内置安全管道，依次执行以下检查，任一步失败即拒绝（fail-closed）：</p>
+        <div class="code-block">
+          <div class="code-head"><span>SecurityPipeline</span></div>
+          <div class="code-body"><code>1. 协议解析与校验（H1/H2/H3）
+2. 请求走私 / 歧义检测（CL.TE / TE.CL / TE.TE）
+3. 身份一致性（SNI ↔ Host ↔ :authority，不一致 → 421）
+4. TLS/AQL 指纹采集（JA3/JA4 等）
+5. 全链路指纹决策（黑白名单 / 评分）
+6. WAF 检测（SQLi/XSS/SSRF/命令注入/路径穿越/BotThreat）
+7. 准入 / 限流（SourceAdmissionEngine + 速率限制）
+8. 路由与业务处理</code></div>
+        </div>
+
+        <h2 id="waf">WAF（zenith-waf）</h2>
+        <p>6 个检测器，采用四阶段处理：<strong>解码 → 就地 NULL 压缩 → 检测 → 规则</strong>。</p>
+        <ul>
+          <li><strong>SQLi / XSS / SSRF / 命令注入 / 路径穿越 / BotThreat</strong> 6 检测器。</li>
+          <li>50ms 预算 fail-closed，超时即拒绝。</li>
+          <li>解码后就地删除（压缩）NULL 字节，防注入绕过（保留 NULL 后载荷，杜绝截断漏检）。</li>
+          <li>规则 IR（CompiledRule / RuleEngine），规则集运行时增删改查 / 启停。</li>
+          <li>自定义 <span class="mono-td">Box&lt;dyn Detector&gt;</span> 扩展。</li>
+        </ul>
+
+        <h2 id="fingerprint">指纹识别（zenith-fingerprint）</h2>
+        <p>全链路指纹识别与阻断，覆盖 L3-L7：</p>
+        <ul>
+          <li>34 采集器结构体（37 collect 入口），覆盖 L3×5 + L4 TCP×6 + L4 UDP×3 + L6 TLS×8 + L6 QUIC×1 + L7 HTTP×5 + H2×2 + H3×2 + Timing×2。</li>
+          <li><span class="mono-td">FingerprintVector</span> 256B 固定宽度（Copy、零堆分配）。</li>
+          <li>决策引擎：规则 + 加权评分 + 黑白名单 + 64 分片速率 + LRU 信誉。</li>
+          <li>XDP / L4 / L7 三级阻断。</li>
+        </ul>
+
+        <h2 id="tls-fingerprint">TLS 指纹</h2>
+        <p>JA3 / JA4 / JA4S / JA4O / JA4H / JA4L 指纹识别，blocklist 前缀阻断 + 64 分片速率限制（60s/100 次 → 429）。<strong>TCP/TLS 与 HTTP/3(QUIC) 连接均采集</strong>（QUIC 经 <span class="mono-td">from_quic_client_hello</span> 解析裸 handshake ClientHello）。</p>
+
+        <h2 id="identity">身份一致性</h2>
+        <p>SNI ↔ Host ↔ :authority 四元必须一致，不一致 → <span class="mono-td">421 Misdirected Request</span>。</p>
+
+        <h2 id="smuggling">请求走私防护</h2>
+        <p>HTTP/1.1 的 CL.TE / TE.CL / TE.TE 检测，配合 CRLF 注入拒绝与响应拆分防护。</p>
+
+        <h2 id="fail-closed">Fail-Closed 原则</h2>
+        <div class="callout danger">
+          <strong>Fail-Closed：</strong>任何探测 / 构建 / 解析 / 匹配失败均取安全默认值，永不 panic。安全相关默认值一律保守：无证书不回退明文、无白名单拒绝全部、预算超时拒绝请求。
+        </div>
+
+        <ul>
+          <li><strong>恒定时间比较</strong>：DCID / Token / 密码 / 模式匹配统一用 ct_compare，<span class="mono-td">#[inline(never)]</span> + <span class="mono-td">core::hint::black_box</span> 防时序泄漏。</li>
+          <li><strong>私钥零化</strong>：<span class="mono-td">Zeroizing&lt;PrivateKeyDer&gt;</span>，drop 时自动擦除。</li>
+          <li><strong>CORS 安全默认</strong>：allow_origin 默认为空，需显式 with_origin 配置。</li>
+          <li><strong>/metrics 认证</strong>：未配置 token 返回 404，配置时校验 Bearer 恒定时间比较。</li>
+          <li><strong>审计日志默认脱敏</strong>：log() 默认 IP 与敏感字段脱敏。</li>
+        </ul>
+
+        <div class="callout">
+          安全能力已通过真实攻击载荷验证（见 <a href="../benchmarks.html">基准</a>）。完整修复历史见 <a href="../security.html">安全审计</a> 页面。
+        </div>
+      </div>
+
+      <aside class="doc-toc" id="doc-toc"></aside>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>文档</h4>
+          <ul>
+            <li><a href="quickstart.html">快速开始</a></li>
+            <li><a href="architecture.html">架构分层</a></li>
+            <li><a href="web.html">Web 框架</a></li>
+            <li><a href="deploy.html">部署</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="../features.html">特性</a></li>
+            <li><a href="../benchmarks.html">基准</a></li>
+            <li><a href="../security.html">安全</a></li>
+            <li><a href="../license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="../security.html#disclosure">漏洞报告</a></li>
+            <li><a href="../sponsors.html">赞助与商业</a></li>
+            <li><a href="../links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/docs.js"></script>
+</body>
+</html>

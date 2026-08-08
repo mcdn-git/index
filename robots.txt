@@ -1,0 +1,15 @@
+# 允许所有搜索引擎爬虫访问
+User-agent: *
+
+# 设置爬虫延迟（秒）
+Crawl-delay: 10
+
+# 定义站点地图位置
+Sitemap: https://www.mosit.cn/sitemap.xml
+
+#允许AI爬虫行为：AI搜索、AI索引和AI训练
+Content-Signal: ai-train=yes, search=yes, ai-input=yes
+
+# 允许访问的目录
+Allow: /
+Allow: /*

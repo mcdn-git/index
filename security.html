@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>安全 — Zenith（齐天）</title>
+  <meta name="description" content="Zenith 安全能力、多轮安全审计报告与漏洞披露流程。">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="index.html">首页</a></li>
+        <li><a href="features.html">特性</a></li>
+        <li><a href="docs.html">文档</a></li>
+        <li><a href="benchmarks.html">基准</a></li>
+        <li><a href="security.html">安全</a></li>
+        <li><a href="sponsors.html">赞助</a></li>
+        <li><a href="links.html">友链</a></li>
+        <li><a href="license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="docs/quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Security</span>
+      <h1>安全</h1>
+      <p class="lead">Fail-Closed 是 Zenith 的第一性原理。这里沉淀了 8 轮安全审计的闭环成果与完整的漏洞披露流程。</p>
+    </div>
+  </header>
+
+  <!-- 安全能力 -->
+  <section class="section">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">安全能力</span>
+        <h2 class="section-title">纵深防御，默认安全</h2>
+      </div>
+      <div class="grid g-3" style="margin-top:32px;">
+        <div class="card reveal"><div class="ico">ct</div><h3>恒定时间比较</h3><p>DCID / Token / 密码 / 模式匹配统一使用 ct_compare，配合 core::hint::black_box 防时序侧信道。</p></div>
+        <div class="card reveal"><div class="ico">fail</div><h3>Fail-Closed</h3><p>探测 / 构建 / 解析失败取安全默认值，永不 panic；无证书绝不回退明文。</p></div>
+        <div class="card reveal"><div class="ico">zero</div><h3>私钥零化</h3><p>CertGeneration 使用 Zeroizing&lt;PrivateKeyDer&gt;，作用域结束自动擦除私钥材料。</p></div>
+        <div class="card reveal"><div class="ico">unsafe</div><h3>unsafe 隔离</h3><p>所有 unsafe 严格封装在 zenith-linux / zenith-ebpf 内部，上层零 unsafe，全 workspace deny(unsafe_code)。</p></div>
+        <div class="card reveal"><div class="ico">cors</div><h3>CORS 安全默认</h3><p>allow_origin 默认为空，不发送任何 CORS 头，需显式 with_origin 配置。</p></div>
+        <div class="card reveal"><div class="ico">metrics</div><h3>/metrics 认证</h3><p>未配置 token 返回 404，配置时校验 Bearer 恒定时间比较。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 审计时间线 -->
+  <section class="section">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">审计时间线</span>
+        <h2 class="section-title">8 轮闭环审计</h2>
+      </div>
+      <div class="timeline reveal" style="margin-top:36px;">
+        <div class="timeline-item"><span class="v">v1</span><h4>基础缺陷修复</h4><p>9 项代码缺陷 + 4 项文档修正，含字段名、状态回滚、TOCTOU、代际溢出等。</p></div>
+        <div class="timeline-item"><span class="v">v2</span><h4>综合审计</h4><p>31 个任务约 100 个子任务：2 CRITICAL + 4 HIGH + 9 P1 + 9 P2 + 8 LOW。含 AuthMiddleware、QUIC 流表、H3 响应上限、TCP 连接表。</p></div>
+        <div class="timeline-item"><span class="v">v3</span><h4>22 维度审计</h4><p>4 High + 21 Medium + 18 Low：BPF redirect flags、RLIMIT_MEMLOCK、指纹评分白/黑名单、QoS 继承。</p></div>
+        <div class="timeline-item"><span class="v">v4</span><h4>系统级再审计</h4><p>6 P0 + 12 P1 + 20 P2：ct_compare 全函数 black_box、/metrics Bearer、QPACK 总字节上限、ForwardEngine 三态。</p></div>
+        <div class="timeline-item"><span class="v">v5-v7</span><h4>深度再审计</h4><p>QUIC 保留位校验、BPF 分片逃逸、WAF NULL 字节 fail-open 修复、runtime 防超卖。</p></div>
+        <div class="timeline-item"><span class="v">v8</span><h4>全链路加固</h4><p>246 项审计可落地项：恒定时间比较、FramePool/Ledger 一致性、HTTP/1-2-3 解析、0-RTT 重放防护、TCP 状态机加固。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 漏洞披露 -->
+  <section class="section" id="disclosure">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">漏洞披露</span>
+        <h2 class="section-title">Responsible Disclosure</h2>
+        <p class="section-sub">感谢安全研究者的贡献。我们遵循负责任披露流程，请在公开讨论前先与我们联系。</p>
+      </div>
+      <div class="grid g-2" style="margin-top:32px;">
+        <div class="card reveal"><div class="ico">01</div><h3>提交报告</h3><p>通过 2098175794@qq.com 私密提交，包含影响版本、复现步骤与建议修复。请勿先公开披露。</p></div>
+        <div class="card reveal"><div class="ico">02</div><h3>响应承诺</h3><p>我们将在 5 个工作日内确认，30 天内给出修复计划。严重漏洞将优先处理并发布安全版本。</p></div>
+        <div class="card reveal"><div class="ico">03</div><h3>致谢</h3><p>确认的有效漏洞将致谢报告者，并（可选）在 SPONSORS.md 中公开署名。</p></div>
+        <div class="card reveal"><div class="ico">04</div><h3>支持范围</h3><p>安全支持覆盖当前稳定版本与最近一个主版本。历史版本请升级后报告。</p></div>
+      </div>
+      <div class="callout warn" style="margin-top:32px;">
+        <strong>安全支持范围：</strong>仅覆盖当前稳定版本。生产环境请始终使用最新 release，并启用 cargo audit 定期扫描依赖。
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="features.html">特性</a></li>
+            <li><a href="benchmarks.html">基准</a></li>
+            <li><a href="docs.html">文档</a></li>
+            <li><a href="security.html">安全</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>资源</h4>
+          <ul>
+            <li><a href="docs.html#quickstart">快速开始</a></li>
+            <li><a href="docs.html#architecture">架构分层</a></li>
+            <li><a href="docs.html#features">Feature 矩阵</a></li>
+            <li><a href="license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="security.html#disclosure">漏洞报告</a></li>
+            <li><a href="sponsors.html">赞助与商业</a></li>
+            <li><a href="links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

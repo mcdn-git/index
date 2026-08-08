@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>性能基准 — Zenith（齐天）</title>
+  <meta name="description" content="Zenith 真实进程级基准：HTTP/1.1 吞吐、HTTP/2、HTTP/3、TLS 1.3、WAF 与攻击防御验证。">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="index.html">首页</a></li>
+        <li><a href="features.html">特性</a></li>
+        <li><a href="docs.html">文档</a></li>
+        <li><a href="benchmarks.html">基准</a></li>
+        <li><a href="security.html">安全</a></li>
+        <li><a href="sponsors.html">赞助</a></li>
+        <li><a href="links.html">友链</a></li>
+        <li><a href="license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="docs/quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Benchmarks</span>
+      <h1>性能基准</h1>
+      <p class="lead">真实进程级验证（WSL Ubuntu 26.04，2核500M内存）。所有数字来自标准工具：wrk / h2spec / h3spec / curl / hping3。</p>
+    </div>
+  </header>
+
+  <!-- 核心指标 -->
+  <section class="section">
+    <div class="wrap">
+      <div class="metrics-band reveal">
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="60359">0</span><em> req/s</em></div><div class="m-lbl">HTTP/1.1 高并发 (t4-c200)</div></div>
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="90706">0</span><em> req/s</em></div><div class="m-lbl">HTTP/1.1 低并发 (t2-c20)</div></div>
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="249">0</span><em> µs</em></div><div class="m-lbl">p50 延迟</div></div>
+        <div class="metric"><div class="m-num"><span class="count-up" data-count="74">0</span><em> MB</em></div><div class="m-lbl">200 连接 RSS</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 吞吐表格 -->
+  <section class="section">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">吞吐基准</span>
+        <h2 class="section-title">wrk 验证</h2>
+      </div>
+      <div class="table-wrap reveal" style="margin-top:32px;">
+        <table>
+          <thead><tr><th>场景</th><th>工具</th><th>结果</th><th>备注</th></tr></thead>
+          <tbody>
+            <tr><td class="mono-td">HTTP/1.1 Plain 高并发</td><td class="mono-td">wrk -t4 -c200 -d8s</td><td class="badge-pass">60,359 req/s</td><td>p50 5.14ms，483k 请求，0 socket errors</td></tr>
+            <tr><td class="mono-td">HTTP/1.1 Plain 低并发</td><td class="mono-td">wrk -t2 -c20 -d5s</td><td class="badge-pass">90,706 req/s</td><td>p50 249µs</td></tr>
+            <tr><td class="mono-td">HTTP/1.1 Plain POST</td><td class="mono-td">wrk -t4 -c200 -d8s</td><td class="badge-pass">32,881 req/s</td><td>服务器按 405 正常处理</td></tr>
+            <tr><td class="mono-td">HTTP/1.1 非保活</td><td class="mono-td">wrk -s close.lua</td><td class="badge-pass">26,327 req/s</td><td>每请求建连</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 协议合规 -->
+  <section class="section">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">协议合规</span>
+        <h2 class="section-title">h2spec / h3spec / curl</h2>
+      </div>
+      <div class="table-wrap reveal" style="margin-top:32px;">
+        <table>
+          <thead><tr><th>协议</th><th>工具</th><th>结果</th></tr></thead>
+          <tbody>
+            <tr><td class="mono-td">HTTP/2</td><td class="mono-td">h2spec</td><td class="badge-pass">146 / 146 通过</td></tr>
+            <tr><td class="mono-td">HTTP/3</td><td class="mono-td">h3spec</td><td class="badge-pass">49 / 49 通过（IPv4 + IPv6）</td></tr>
+            <tr><td class="mono-td">HTTP/2</td><td class="mono-td">curl --http2</td><td class="badge-pass">200（TLS ALPN h2 协商成功）</td></tr>
+            <tr><td class="mono-td">HTTP/3</td><td class="mono-td">curl --http3</td><td class="badge-pass">200（QUIC + io_uring 批量收发）</td></tr>
+            <tr><td class="mono-td">HTTP/3 互操作</td><td class="mono-td">curl --http3-only</td><td class="badge-pass">200（nghttp3/ngtcp2 真实 QUIC 握手）</td></tr>
+            <tr><td class="mono-td">TLS 1.3</td><td class="mono-td">curl -vk</td><td class="badge-pass">TLS_AES_256_GCM_SHA384 / X25519 / ALPN h2</td></tr>
+            <tr><td class="mono-td">IPv6</td><td class="mono-td">curl [::1]</td><td class="badge-pass">200（Plain + TLS + H3）</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 安全与抗压 -->
+  <section class="section">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="eyebrow">安全与抗压</span>
+        <h2 class="section-title">攻击防御与洪水存活</h2>
+      </div>
+      <div class="table-wrap reveal" style="margin-top:32px;">
+        <table>
+          <thead><tr><th>验证项</th><th>工具</th><th>结果</th></tr></thead>
+          <tbody>
+            <tr><td class="mono-td">WAF 攻击拦截</td><td class="mono-td">curl 攻击 payload</td><td class="badge-pass">SQLi/XSS/SSRF/命令注入/路径穿越/NULL 全 403</td></tr>
+            <tr><td class="mono-td">BotThreat</td><td class="mono-td">curl UA</td><td class="badge-pass">sqlmap/nikto 等一视同仁 403（Plain/TLS/H3）</td></tr>
+            <tr><td class="mono-td">指纹阻断</td><td class="mono-td">curl Ja3/Ja4</td><td class="badge-pass">TCP/TLS 与 HTTP/3 黑名单 403 均生效</td></tr>
+            <tr><td class="mono-td">SYN 洪水</td><td class="mono-td">hping3 -S</td><td class="badge-pass">SYN 全应答，2000 包无丢包</td></tr>
+            <tr><td class="mono-td">CVE 扫描</td><td class="mono-td">cargo audit</td><td class="badge-pass">零风险</td></tr>
+            <tr><td class="mono-td">内存泄漏</td><td class="mono-td">进程级 RSS</td><td class="badge-pass">200 连接下稳定 ~74MB，无泄漏</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 测试基线 -->
+  <section class="section">
+    <div class="wrap">
+      <div class="metrics-band reveal">
+        <div style="grid-column:1/-1; text-align:center; justify-items:center;">
+          <h2 class="section-title">测试基线</h2>
+          <p class="section-sub" style="margin:0 auto 12px;">3235 项通过 / 0 失败（53 套件，cargo test --workspace --all-features）</p>
+          <div class="code-block" style="text-align:left; max-width:560px; margin:0 auto;">
+            <div class="code-head"><span>terminal</span></div>
+            <div class="code-body"><code>$ cargo test --workspace --all-features
+<span class="g">test result: ok. 3235 passed; 0 failed</span>
+<span class="g">✓ 53 suites</span></code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="features.html">特性</a></li>
+            <li><a href="benchmarks.html">基准</a></li>
+            <li><a href="docs.html">文档</a></li>
+            <li><a href="security.html">安全</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>资源</h4>
+          <ul>
+            <li><a href="docs.html#quickstart">快速开始</a></li>
+            <li><a href="docs.html#architecture">架构分层</a></li>
+            <li><a href="docs.html#features">Feature 矩阵</a></li>
+            <li><a href="license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="security.html#disclosure">漏洞报告</a></li>
+            <li><a href="sponsors.html">赞助与商业</a></li>
+            <li><a href="links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

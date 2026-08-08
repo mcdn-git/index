@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>协议实现 — Zenith（齐天）教程</title>
+  <meta name="description" content="Zenith 协议实现：HTTP/1.1、HTTP/2、HTTP/3、TLS 1.3 与 QUIC，以及协议合规验证。">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-doc="http">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="../index.html">首页</a></li>
+        <li><a href="../features.html">特性</a></li>
+        <li><a href="../docs.html">文档</a></li>
+        <li><a href="../benchmarks.html">基准</a></li>
+        <li><a href="../security.html">安全</a></li>
+        <li><a href="../sponsors.html">赞助</a></li>
+        <li><a href="../links.html">友链</a></li>
+        <li><a href="../license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Tutorial · 05</span>
+      <h1>协议实现</h1>
+      <p class="lead">Zenith 原生实现 HTTP/1.1、HTTP/2、HTTP/3(QUIC) 与 TLS 1.3，全部通过真实进程级合规验证。</p>
+    </div>
+  </header>
+
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap doc-layout">
+      <aside id="doc-sidebar"></aside>
+
+      <div class="doc-body">
+        <h2 id="http1">HTTP/1.1（RFC 7230）</h2>
+        <p>由 <span class="mono-td">zenith-http1</span> 实现，主打热路径零堆分配与流式解析。</p>
+        <ul>
+          <li>流式解析，固定容量数组，避免热路径堆分配。</li>
+          <li><strong>CRLF 注入拒绝</strong>：add_header 拒绝含 <span class="mono-td">\r\n</span> 的值。</li>
+          <li><strong>Content-Length / Transfer-Encoding 二选一</strong>，杜绝歧义。</li>
+          <li><strong>请求走私防护</strong>：CL.TE / TE.CL / TE.TE 检测。</li>
+          <li>强制 Host 头。</li>
+        </ul>
+
+        <h2 id="http2">HTTP/2（RFC 7540）</h2>
+        <p>由 <span class="mono-td">zenith-http2</span> 实现，支持流多路复用与 HPACK 压缩。</p>
+        <ul>
+          <li>帧解析、连接级状态机。</li>
+          <li>HPACK 头部压缩，动态表溢出受控。</li>
+          <li>流量控制（窗口管理）。</li>
+          <li><strong>Rapid Reset 攻击检测</strong>。</li>
+        </ul>
+        <div class="callout">
+          合规验证：<strong>h2spec 146/146 通过</strong>；curl --http2 返回 200（TLS ALPN h2 协商成功）。
+        </div>
+
+        <h2 id="http3">HTTP/3（RFC 9114）over QUIC（RFC 9000）</h2>
+        <p>由 <span class="mono-td">zenith-http3</span>（应用层）+ <span class="mono-td">zenith-net</span>（QUIC 传输）实现，提供真实 <span class="mono-td">QuicServer</span>。</p>
+        <ul>
+          <li>QPACK 头部压缩，总字节上限防解压炸弹。</li>
+          <li>SETTINGS 协商、GOAWAY 关闭流程。</li>
+          <li>控制流 / 请求流帧类型严格校验。</li>
+          <li>优先级（RFC 9218）。</li>
+        </ul>
+        <div class="callout">
+          合规验证：<strong>h3spec 49/49 通过</strong>（IPv4 + IPv6）；curl --http3 返回 200；外部 curl（nghttp3/ngtcp2）真实 QUIC 握手 + HTTP/3 200 + 连接复用。
+        </div>
+
+        <h2 id="tls">TLS 1.3</h2>
+        <p>由 <span class="mono-td">zenith-tls</span> 实现，基于 <strong>rustls + ring</strong>（唯一密码学后端）。</p>
+        <ul>
+          <li>双 Bank 证书代际热切换（<span class="mono-td">CertManager</span>）。</li>
+          <li>SNI / ALPN 路由。</li>
+          <li>身份一致性：SNI ↔ Host ↔ :authority 四元一致，不一致 → 421。</li>
+          <li>JA3 / JA4 / JA4S / JA4O / JA4H 指纹采集。</li>
+          <li>0-RTT 支持，默认 <span class="mono-td">max_early_data_size=0</span> + 60s 重放窗口。</li>
+          <li><strong>Fail-Closed</strong>：无证书绝不回退明文。</li>
+        </ul>
+        <div class="code-block">
+          <div class="code-head"><span>验证</span></div>
+          <div class="code-body"><code>curl -vk https://localhost:8443/
+<span class="g">TLS_AES_256_GCM_SHA384 / X25519 / ALPN h2</span></code></div>
+        </div>
+
+        <h2 id="quic">QUIC 传输（RFC 9000）</h2>
+        <p><span class="mono-td">zenith-net</span> 提供真实 QUIC 传输层，支撑 HTTP/3。安全加固包括：</p>
+        <ul>
+          <li>STOP_SENDING（0x05）独立解析。</li>
+          <li>CRYPTO 缓冲区限制 65536 字节。</li>
+          <li>HTTP/3 stream ID 取模在 u64 空间执行（32 位安全）。</li>
+          <li>Initial 保留位 Fixed Bit(0x40) 校验（RFC 9000 §17.2）。</li>
+        </ul>
+
+        <h2 id="compliance">合规性总结</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>协议</th><th>工具</th><th>结果</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-td">HTTP/2</td><td class="mono-td">h2spec</td><td class="badge-pass">146 / 146</td></tr>
+              <tr><td class="mono-td">HTTP/3</td><td class="mono-td">h3spec</td><td class="badge-pass">49 / 49</td></tr>
+              <tr><td class="mono-td">HTTP/2</td><td class="mono-td">curl --http2</td><td class="badge-pass">200</td></tr>
+              <tr><td class="mono-td">HTTP/3</td><td class="mono-td">curl --http3</td><td class="badge-pass">200</td></tr>
+              <tr><td class="mono-td">TLS 1.3</td><td class="mono-td">curl -vk</td><td class="badge-pass">200</td></tr>
+              <tr><td class="mono-td">IPv6</td><td class="mono-td">curl [::1]</td><td class="badge-pass">200（Plain/TLS/H3）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          协议层之上是应用层。HTTP 请求最终收敛到 <span class="mono-td">CanonicalRequest</span>，由 <a href="web.html">Web 框架</a> 处理。
+        </div>
+      </div>
+
+      <aside class="doc-toc" id="doc-toc"></aside>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="../index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>文档</h4>
+          <ul>
+            <li><a href="quickstart.html">快速开始</a></li>
+            <li><a href="architecture.html">架构分层</a></li>
+            <li><a href="web.html">Web 框架</a></li>
+            <li><a href="deploy.html">部署</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="../features.html">特性</a></li>
+            <li><a href="../benchmarks.html">基准</a></li>
+            <li><a href="../security.html">安全</a></li>
+            <li><a href="../license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="../security.html#disclosure">漏洞报告</a></li>
+            <li><a href="../sponsors.html">赞助与商业</a></li>
+            <li><a href="../links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/main.js"></script>
+  <script src="../js/docs.js"></script>
+</body>
+</html>

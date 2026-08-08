@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文档总览 — Zenith（齐天）</title>
+  <meta name="description" content="Zenith 官方文档总览：快速开始、架构分层、Feature 矩阵、Web 框架、协议实现、安全管道、运行时热更新、部署与降级。">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-doc="index">
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+      <ul class="nav-links">
+        <li><a href="index.html">首页</a></li>
+        <li><a href="features.html">特性</a></li>
+        <li><a href="docs.html">文档</a></li>
+        <li><a href="benchmarks.html">基准</a></li>
+        <li><a href="security.html">安全</a></li>
+        <li><a href="sponsors.html">赞助</a></li>
+        <li><a href="links.html">友链</a></li>
+        <li><a href="license.html">许可证</a></li>
+      </ul>
+      <a class="nav-cta" href="docs/quickstart.html">快速开始</a>
+      <button class="nav-toggle" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <header class="page-head">
+    <div class="wrap">
+      <span class="eyebrow">Documentation</span>
+      <h1>文档总览</h1>
+      <p class="lead">Zenith 采用 feature-gated facade，按需启用能力。以下教程按部分拆分，从第一行代码到完整数据面逐步深入。</p>
+    </div>
+  </header>
+
+  <section class="section" style="padding-top:20px;">
+    <div class="wrap doc-layout">
+      <aside id="doc-sidebar"></aside>
+
+      <div class="doc-body">
+        <h2 id="welcome">欢迎使用 Zenith</h2>
+        <p>Zenith（齐天）是用 Rust 编写的 <strong>L2→L7 全栈网络安全数据面框架</strong>。在单一代码库中实现完整的网络栈——从网卡驱动层的 AF_XDP / eBPF 零拷贝数据面，到应用层的路由、WAF、代理、缓存与指纹识别。</p>
+        <p>它既能构建系统级网络防火墙，也能构建 CDN 边缘节点和 API 网关。默认仅启用最小核心（<span class="mono-td">api + core</span>），其余能力通过 feature 按需开启，避免拖入不必要的重依赖。</p>
+
+        <div class="callout">
+          <strong>快速判断你需要哪部分：</strong>第一次接触从「快速开始」入手；想理解设计定位看「架构分层」；按需选型看「Feature 矩阵」；编写业务看「Web 框架指南」「协议实现」；上线前务必阅读「安全管道」「部署与降级」。
+        </div>
+
+        <h2 id="toc-docs">教程章节</h2>
+        <div class="grid g-2" style="margin-top:12px;">
+          <a class="card" href="docs/quickstart.html" style="color:inherit; display:block;">
+            <div class="ico">01 · 快速开始</div>
+            <h3>Quickstart</h3>
+            <p>安装要求、最小依赖、第一个 Web 应用、运行示例。</p>
+          </a>
+          <a class="card" href="docs/architecture.html" style="color:inherit; display:block;">
+            <div class="ico">02 · 架构分层</div>
+            <h3>Architecture</h3>
+            <p>L2→L7 全栈分层、20 个 crate 职责、数据面协作模型。</p>
+          </a>
+          <a class="card" href="docs/features.html" style="color:inherit; display:block;">
+            <div class="ico">03 · Feature 矩阵</div>
+            <h3>Features</h3>
+            <p>全部 feature 与依赖矩阵、组合特性、按需导入方式。</p>
+          </a>
+          <a class="card" href="docs/web.html" style="color:inherit; display:block;">
+            <div class="ico">04 · Web 框架指南</div>
+            <h3>Web Framework</h3>
+            <p>编译期 Trie 路由、类型化 Extractor、中间件 DAG、静态文件。</p>
+          </a>
+          <a class="card" href="docs/http.html" style="color:inherit; display:block;">
+            <div class="ico">05 · 协议实现</div>
+            <h3>Protocols</h3>
+            <p>HTTP/1.1、HTTP/2、HTTP/3、TLS 1.3 与 QUIC 全协议实现。</p>
+          </a>
+          <a class="card" href="docs/security.html" style="color:inherit; display:block;">
+            <div class="ico">06 · 安全管道</div>
+            <h3>Security</h3>
+            <p>SecurityPipeline 8 步管道、WAF、指纹、身份一致性、Fail-Closed。</p>
+          </a>
+          <a class="card" href="docs/hot-reload.html" style="color:inherit; display:block;">
+            <div class="ico">07 · 运行时热更新</div>
+            <h3>Hot Reload</h3>
+            <p>全链路 L2→L7 运行时热更新，无重建服务器。</p>
+          </a>
+          <a class="card" href="docs/deploy.html" style="color:inherit; display:block;">
+            <div class="ico">08 · 部署与降级</div>
+            <h3>Deploy</h3>
+            <p>跨平台自动降级、构建要求、生产部署建议。</p>
+          </a>
+        </div>
+
+        <h2 id="quick-nav">工程速览</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>维度</th><th>数值</th></tr></thead>
+            <tbody>
+              <tr><td class="mono-td">Crate 数量</td><td>20（19 子 crate + 1 顶层 facade）</td></tr>
+              <tr><td class="mono-td">测试基线</td><td>3235 通过 / 0 失败（53 套件）</td></tr>
+              <tr><td class="mono-td">Rust 版本</td><td>1.97.1+（Stable，禁止 Nightly/Beta），edition 2024</td></tr>
+              <tr><td class="mono-td">unsafe 策略</td><td>全 workspace deny(unsafe_code)，隔离于 zen-linux / zen-ebpf 内部</td></tr>
+              <tr><td class="mono-td">密码学后端</td><td>rustls + ring（唯一后端，aws-lc-rs 已移除）</td></tr>
+              <tr><td class="mono-td">许可证</td><td>GPL-2.0 / MIT / Apache-2.0 三选一 + 商业授权</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <aside class="doc-toc" id="doc-toc"></aside>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="index.html"><span class="brand-mark">▲</span><span>Zenith<small>齐天</small></span></a>
+          <p class="brand-desc">L2→L7 全栈网络安全数据面框架：从内核旁路到应用层的完整 Rust 网络栈。</p>
+        </div>
+        <div>
+          <h4>文档</h4>
+          <ul>
+            <li><a href="docs/quickstart.html">快速开始</a></li>
+            <li><a href="docs/architecture.html">架构分层</a></li>
+            <li><a href="docs/web.html">Web 框架</a></li>
+            <li><a href="docs/deploy.html">部署</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>产品</h4>
+          <ul>
+            <li><a href="features.html">特性</a></li>
+            <li><a href="benchmarks.html">基准</a></li>
+            <li><a href="security.html">安全</a></li>
+            <li><a href="license.html">许可证</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>社区</h4>
+          <ul>
+            <li><a href="#">GitHub</a></li>
+            <li><a href="security.html#disclosure">漏洞报告</a></li>
+            <li><a href="sponsors.html">赞助与商业</a></li>
+            <li><a href="links.html">友情链接</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Zenith（齐天）项目</span>
+        <span class="mono">GPL-2.0 · MIT · Apache-2.0</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/docs.js"></script>
+</body>
+</html>
