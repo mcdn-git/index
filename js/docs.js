@@ -3,20 +3,26 @@
 (function () {
   'use strict';
 
-  var DOCS = [
-    { id: 'index',      title: '文档总览', href: 'docs.html' },
-    { id: 'quickstart', title: '快速开始', href: 'docs/quickstart.html' },
-    { id: 'architecture', title: '架构分层', href: 'docs/architecture.html' },
-    { id: 'features',   title: 'Feature 矩阵', href: 'docs/features.html' },
-    { id: 'web',        title: 'Web 框架指南', href: 'docs/web.html' },
-    { id: 'http',       title: '协议实现', href: 'docs/http.html' },
-    { id: 'security',   title: '安全管道', href: 'docs/security.html' },
-    { id: 'hotreload',  title: '运行时热更新', href: 'docs/hot-reload.html' },
-    { id: 'deploy',     title: '部署与降级', href: 'docs/deploy.html' },
-  ];
-
   var current = document.body.getAttribute('data-doc') || 'index';
   var container = document.getElementById('doc-sidebar');
+
+  /* 父级 docs.html 位于 html/，子教程页位于 html/docs/。
+     根据当前位置选择前缀，避免子页出现 docs/docs/ 嵌套。 */
+  var inSubfolder = current !== 'index';
+  var prefix = inSubfolder ? '' : 'docs/';
+  var indexHref = inSubfolder ? '../docs.html' : 'docs.html';
+
+  var DOCS = [
+    { id: 'index',      title: '文档总览', href: indexHref },
+    { id: 'quickstart', title: '快速开始', href: prefix + 'quickstart.html' },
+    { id: 'architecture', title: '架构分层', href: prefix + 'architecture.html' },
+    { id: 'features',   title: 'Feature 矩阵', href: prefix + 'features.html' },
+    { id: 'web',        title: 'Web 框架指南', href: prefix + 'web.html' },
+    { id: 'http',       title: '协议实现', href: prefix + 'http.html' },
+    { id: 'security',   title: '安全管道', href: prefix + 'security.html' },
+    { id: 'hotreload',  title: '运行时热更新', href: prefix + 'hot-reload.html' },
+    { id: 'deploy',     title: '部署与降级', href: prefix + 'deploy.html' },
+  ];
 
   if (!container) return;
 
